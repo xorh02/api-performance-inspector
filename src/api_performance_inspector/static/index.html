@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Performance Inspector</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="static/style.css">
+  <script src="static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>API Performance Inspector</h1>
+      <span id="status-line" class="muted" aria-live="polite">Loading…</span>
+    </div>
+    <div class="controls">
+      <label>Window
+        <select id="window">
+          <option value="300">Last 5 minutes</option>
+          <option value="900">Last 15 minutes</option>
+          <option value="3600" selected>Last hour</option>
+          <option value="21600">Last 6 hours</option>
+          <option value="86400">Last 24 hours</option>
+          <option value="0">All retained</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="auto-refresh"> Auto-refresh (10s)</label>
+      <button id="refresh" type="button">Refresh</button>
+      <a id="export-json" class="button secondary" href="api/export?format=json">Export JSON</a>
+      <a id="export-csv" class="button secondary" href="api/export?format=csv">Export CSV</a>
+    </div>
+  </header>
+
+  <main>
+    <section id="error-banner" class="banner" hidden></section>
+    <section id="limit-note" class="banner note" hidden></section>
+
+    <section id="empty" class="panel empty" hidden>
+      <h2>No requests recorded in this window</h2>
+      <p>Send some requests to your instrumented application, then press Refresh. With SQLite
+        storage, measurements reach the database within about a second. If your traffic is
+        older than the selected window, choose a longer one.</p>
+      <pre><code>from api_performance_inspector import PerformanceInspector
+
+inspector = PerformanceInspector(storage="sqlite", database_path="api_metrics.db")
+inspector.instrument(app)</code></pre>
+    </section>
+
+    <div id="content" hidden>
+      <section class="cards" aria-label="Overview">
+        <div class="card"><span class="label">Requests</span><span class="value" id="ov-requests"></span><span class="sub" id="ov-rps"></span></div>
+        <div class="card"><span class="label">p50 latency</span><span class="value" id="ov-p50"></span><span class="sub">ms</span></div>
+        <div class="card"><span class="label">p95 latency</span><span class="value" id="ov-p95"></span><span class="sub">ms</span></div>
+        <div class="card"><span class="label">p99 latency</span><span class="value" id="ov-p99"></span><span class="sub">ms</span></div>
+        <div class="card"><span class="label">Error rate</span><span class="value" id="ov-error-rate"></span><span class="sub" id="ov-errors"></span></div>
+        <div class="card"><span class="label">Slow requests</span><span class="value" id="ov-slow"></span><span class="sub" id="ov-slow-pct"></span></div>
+      </section>
+
+      <div class="grid two">
+        <section class="panel">
+          <div class="panel-head"><h2>Request volume</h2><span class="muted" id="bucket-label"></span></div>
+          <div id="chart-volume" class="chart"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Latency trend</h2><span class="muted">milliseconds</span></div>
+          <div id="chart-latency" class="chart"></div>
+        </section>
+      </div>
+
+      <div class="grid two">
+        <section class="panel">
+          <div class="panel-head"><h2>Slowest endpoints</h2><span class="muted">by p95, ms</span></div>
+          <ol id="slowest" class="bars"></ol>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Errors</h2><span class="muted">status classes and failing routes</span></div>
+          <div id="status-classes" class="status-classes"></div>
+          <table class="compact" id="error-routes">
+            <thead><tr><th>Route</th><th class="num">Errors</th><th class="num">Rate</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Endpoint performance</h2><span class="muted">click a column to sort</span></div>
+        <div class="table-wrap">
+          <table id="endpoints" class="sortable">
+            <thead>
+              <tr>
+                <th data-key="method" scope="col">Method</th>
+                <th data-key="route" scope="col">Route</th>
+                <th data-key="requests" class="num" scope="col">Requests</th>
+                <th data-key="mean_ms" class="num" scope="col">Mean ms</th>
+                <th data-key="p50_ms" class="num" scope="col">p50 ms</th>
+                <th data-key="p95_ms" class="num" scope="col">p95 ms</th>
+                <th data-key="p99_ms" class="num" scope="col">p99 ms</th>
+                <th data-key="max_ms" class="num" scope="col">Max ms</th>
+                <th data-key="slow_requests" class="num" scope="col">Slow</th>
+                <th data-key="error_rate" class="num" scope="col">Error rate</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer muted" id="collector"></footer>
+  </main>
+</body>
+</html>
